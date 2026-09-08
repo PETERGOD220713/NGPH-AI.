@@ -40,7 +40,7 @@ if prompt := st.chat_input("H?i NGPH AI b?t c? �i?u g?..."):
 
     with st.chat_message("assistant"):
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.0-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
                 system_instruction=system_instruction,
