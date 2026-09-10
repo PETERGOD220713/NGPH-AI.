@@ -103,7 +103,7 @@ if prompt := st.chat_input("Hỏi NGPH AI bất cứ điều gì..."):
         
         try:
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.6-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=system_instruction,
