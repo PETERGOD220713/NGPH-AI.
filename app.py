@@ -3,7 +3,7 @@ from streamlit_google_auth import Authenticate
 
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
-# Khởi tạo Auth từ Secrets
+# Khởi tạo Google Auth từ Secrets
 authenticator = Authenticate(
     secret_credentials_path={
         "web": {
@@ -25,7 +25,7 @@ authenticator.check_authentification()
 # GIAO DIỆN CHƯA ĐĂNG NHẬP
 if not st.session_state.get('connected'):
     st.title("⚡ NGPH AI")
-    st.write("Vui lòng đăng nhập bằng tài khoản Google để tiếp tục.")
+    st.write("Vui lòng đăng nhập tài khoản Google để trải nghiệm hệ thống.")
     
     authorization_url = authenticator.get_authorization_url()
     st.link_button("🔑 Đăng nhập bằng Google", authorization_url, type="primary")
@@ -33,26 +33,28 @@ if not st.session_state.get('connected'):
 # GIAO DIỆN ĐÃ ĐĂNG NHẬP
 else:
     user_info = st.session_state.get('user_info', {})
-    user_name = user_info.get('name', 'Người dùng')
+    user_name = user_info.get('name', 'User')
     user_email = user_info.get('email', '')
     user_avatar = user_info.get('picture', '')
 
     with st.sidebar:
-        st.write("### Tài khoản")
+        st.write("### Profile")
         if user_avatar:
-            st.image(user_avatar, width=70)
+            st.image(user_avatar, width=80)
         st.markdown(f"**{user_name}**")
         st.caption(user_email)
         
-        if st.button("Đăng xuất"):
+        st.divider()
+        if st.button("🚪 Đăng xuất"):
             authenticator.logout()
             st.rerun()
 
     st.title("⚡ NGPH AI")
-    st.write(f"Xin chào **{user_name}**!")
+    st.write(f"Chào boss **{user_name}**! Hệ thống đã sẵn sàng.")
     
+    # Khung Chat
     if prompt := st.chat_input("Hỏi NGPH AI bất cứ điều gì..."):
-        with st.chat_message("user", avatar=user_avatar):
+        with st.chat_message("user", avatar=user_avatar if user_avatar else "👤"):
             st.write(prompt)
         with st.chat_message("assistant", avatar="⚡"):
-            st.write("Tôi đã nhận được câu hỏi của bạn!")
+            st.write("NGPH AI đã nhận phản hồi từ boss!")
