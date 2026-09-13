@@ -4,19 +4,18 @@ import streamlit as st
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
 # Kiểm tra trạng thái đăng nhập OIDC của Streamlit
-if not st.experimental_user.is_logged_in:
+if not st.user.is_logged_in:
     st.title("⚡ NGPH AI")
     st.write("Vui lòng đăng nhập tài khoản Google để trải nghiệm hệ thống.")
     
     # Nút login sử dụng cấu hình [auth] từ Secrets
     if st.button("🔑 Đăng nhập bằng Google", type="primary"):
-        st.login("google")
+        st.login()
 else:
     # Lấy thông tin user đăng nhập thành công
-    user = st.experimental_user
-    user_name = getattr(user, "name", "Boss")
-    user_email = getattr(user, "email", "")
-    user_avatar = getattr(user, "picture", "")
+    user_name = st.user.name if hasattr(st.user, "name") else "Boss"
+    user_email = st.user.email if hasattr(st.user, "email") else ""
+    user_avatar = st.user.picture if hasattr(st.user, "picture") else ""
 
     # Thanh Sidebar
     with st.sidebar:
