@@ -5,6 +5,37 @@ from google import genai
 # 🛠️ 1. Cấu hình giao diện Streamlit
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
+# CSS Custom để kéo nút ➕ vào thẳng bên trong thanh chat kiểu Gemini
+st.markdown("""
+<style>
+    /* Định vị container chứa nút bấm */
+    div[data-element-baseline="true"] {
+        position: relative;
+    }
+    /* Đẩy nút popover lồng vào góc trái thanh chat */
+    div[data-testid="stPopover"] {
+        position: absolute;
+        bottom: 12px;
+        left: 15px;
+        z-index: 999;
+    }
+    /* Tùy chỉnh kiểu dáng nút ➕ */
+    div[data-testid="stPopover"] > button {
+        border-radius: 50% !important;
+        width: 35px !important;
+        height: 35px !important;
+        padding: 0 !important;
+        border: none !important;
+        background-color: #2b2c2e !important;
+        color: #ffffff !important;
+    }
+    /* Thêm lề trái cho ô chat input để chữ không đè lên nút ➕ */
+    div[data-testid="stChatInput"] textarea {
+        padding-left: 50px !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # 🛠️ 2. Lấy API Key từ Secrets hoặc Biến môi trường
 API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 
@@ -45,25 +76,19 @@ st.header("⚡ NGPH AI - Chatbot")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Hiển thị lịch sử chat (Icon Sấm sét cho NGPH AI)
+# Hiển thị lịch sử chat
 for msg in st.session_state.messages:
     avatar_icon = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar_icon):
         st.markdown(msg["content"])
 
-# 🛠️ 5. Thanh nhập liệu kiểu Gemini (Nút ➕ đứng ngang hàng với ô gõ)
-chat_container = st.container()
-with chat_container:
-    col_file, col_input = st.columns([1, 10], vertical_alignment="bottom")
+# 🛠️ 5. Nút ➕ lồng thẳng trên thanh gõ câu hỏi
+with st.popover("➕", help="Thêm file đính kèm"):
+    uploaded_file = st.file_uploader("Tải tệp đính kèm:", type=["png", "jpg", "jpeg", "pdf", "txt"], key="gemini_file")
+    if uploaded_file:
+        st.caption(f"📎 {uploaded_file.name}")
 
-    with col_file:
-        with st.popover("➕", help="Thêm tệp đính kèm"):
-            uploaded_file = st.file_uploader("Tải file:", type=["png", "jpg", "jpeg", "pdf", "txt"], key="gemini_file")
-            if uploaded_file:
-                st.caption(f"📎 {uploaded_file.name}")
-
-    with col_input:
-        prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
+prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
 
 # 🛠️ 6. Xử lý gửi tin nhắn
 if prompt:
