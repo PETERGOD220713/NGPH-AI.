@@ -7,7 +7,10 @@ st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
 # 🛠️ 2. Lấy API Key từ Secrets hoặc Biến môi trường
 API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
-client = genai.Client(api_key=API_KEY) if API_KEY else None
+
+client = None
+if API_KEY:
+    client = genai.Client(api_key=API_KEY)
 
 SYSTEM_INSTRUCTION = """
 Bạn là NGPH AI, một trợ lý trò chuyện thông minh.
@@ -63,6 +66,7 @@ if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
         else:
             with st.spinner("⚡ NGPH AI đang suy nghĩ..."):
                 try:
+                    # Đã sửa tên model chuẩn: gemini-2.5-flash
                     response = client.models.generate_content(
                         model="gemini-2.5-flash",
                         contents=f"{SYSTEM_INSTRUCTION}\n\nNgười dùng: {prompt}"
