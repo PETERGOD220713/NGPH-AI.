@@ -1,21 +1,17 @@
 import os
 import streamlit as st
 from google import genai
+from streamlit_oauth import OAuth2Component
 
-# 🛠️ 1. Cấu hình giao diện Streamlit chuẩn Cyberpunk
+# 🛠️ 1. Cấu hình giao diện Streamlit
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
+# CSS căn chỉnh giao diện
 st.markdown("""
 <style>
     .block-container {
         padding-top: 1.5rem !important;
     }
-    /* Style cho avatar Google góc trên */
-    .user-avatar-img {
-        border-radius: 50%;
-        border: 2px solid #1677ff;
-    }
-    /* Custom nút bấm ➕ */
     div[data-testid="stPopover"] > button {
         border-radius: 12px !important;
         height: 45px !important;
@@ -29,9 +25,20 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 🛠️ 2. Khởi tạo Gemini Client
+# 🛠️ 2. Khởi tạo Gemini Client & OAuth Configuration
 API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 client = genai.Client(api_key=API_KEY) if API_KEY else None
+
+# Lấy thông tin OAuth Google đã tạo từ Secrets
+CLIENT_ID = st.secrets.get("GOOGLE_CLIENT_ID", os.environ.get("GOOGLE_CLIENT_ID", ""))
+CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", os.environ.get("GOOGLE_CLIENT_SECRET", ""))
+REDIRECT_URI = st.secrets.get("REDIRECT_URI", "https://ngph-ai-whqmmuqlkucrwrqfk8ymkr.streamlit.app/")
+
+AUTHORIZATION_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+TOKEN_URL = "https://oauth2.googleapis.com/token"
+REVOKE_URL = "https://oauth2.googleapis.com/revoke"
+
+oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZATION_URL, TOKEN_URL, TOKEN_URL, REVOKE_URL)
 
 SYSTEM_INSTRUCTION = """
 Bạn là NGPH AI, một trợ lý trí tuệ nhân tạo thông minh.
@@ -39,52 +46,64 @@ KHI CÓ BẤT KỲ CÂU HỎI NÀO VỀ NGƯỜI TẠO, TÁC GIẢ HOẶC TRƯ�
 -> BẮT BUỘC TRẢ LỜI LÀ: "Mình được tạo ra bởi Bùi Tấn Nghĩa, học sinh tại trường THCS Nguyễn Hiền!"
 """
 
-# Khai báo kho lưu trữ lịch sử chat toàn cục theo từng User ID
+# Khai báo kho lưu trữ lịch sử chat toàn cục theo từng User Email
 if "chat_db" not in st.session_state:
     st.session_state.chat_db = {}
 
-# 🛠️ 3. Thanh Header & Đăng nhập / Đăng ký Google
+# 🛠️ 3. Header & Nút Đăng nhập / Đăng ký Google
 col_header_left, col_header_right = st.columns([0.6, 0.4], vertical_alignment="center")
 
-user_id = "guest_user"
+user_email = "guest_user"
+user_name = "Khách"
 user_avatar = "👤"
-is_logged = False
 
 with col_header_left:
     st.title("⚡ NGPH AI")
 
 with col_header_right:
-    try:
-        if hasattr(st, "user") and st.user.is_logged_in:
-            is_logged = True
-            user_id = getattr(st.user, "email", "google_user")
-            user_name = getattr(st.user, "name", "Người dùng Google")
-            user_avatar = getattr(st.user, "picture", "👤")
+    # Kiểm tra token đăng nhập trong session_state
+    if "auth_token" not in st.session_state or not st.session_state.auth_token:
+        # Nút Đăng nhập Google chuẩn OAuth
+        result = oauth2.authorize_button(
+            name="🔑 Đăng nhập / Đăng ký Google",
+            icon="https://www.google.com/favicon.ico",
+            redirect_uri=REDIRECT_URI,
+            scope="openid email profile",
+            key="google_auth",
+            use_container_width=True
+        )
+        if result and "token" in result:
+            st.session_state.auth_token = result["token"]
+            st.rerun()
+    else:
+        # Đã đăng nhập: Giải mã token/lấy profile
+        token = st.session_state.auth_token
+        user_info = token.get("id_token", {})
+        
+        # Lấy chi tiết thông tin tài khoản Google
+        user_email = user_info.get("email", "google_user")
+        user_name = user_info.get("name", "Người dùng Google")
+        user_avatar = user_info.get("picture", "👤")
 
-            c_pic, c_info = st.columns([0.2, 0.8], vertical_alignment="center")
-            with c_pic:
-                if user_avatar != "👤":
-                    st.image(user_avatar, width=42)
-                else:
-                    st.write("👤")
-            with c_info:
-                st.markdown(f"**{user_name}**")
-                if st.button("🚪 Đăng xuất", key="btn_logout"):
-                    st.logout()
-        else:
-            if st.button("🔑 Đăng nhập / Đăng ký bằng Google", key="btn_login", use_container_width=True):
-                st.login("google")
-    except Exception:
-        if st.button("🔑 Đăng nhập / Đăng ký Google", key="btn_guest_login", use_container_width=True):
-            st.info("💡 Bạn đang dùng Chế độ Khách (Dữ liệu lưu tạm thời)!")
+        c_pic, c_info = st.columns([0.25, 0.75], vertical_alignment="center")
+        with c_pic:
+            if user_avatar != "👤":
+                st.image(user_avatar, width=42)
+            else:
+                st.write("👤")
+        with c_info:
+            st.markdown(f"**{user_name}**")
+            if st.button("🚪 Đăng xuất", key="btn_logout"):
+                st.session_state.auth_token = None
+                st.rerun()
 
 st.divider()
 
 # 🛠️ 4. Tải lịch sử cuộc trò chuyện riêng của Tài khoản
-if user_id not in st.session_state.chat_db:
-    st.session_state.chat_db[user_id] = []
+if user_email not in st.session_state.chat_db:
+    st.session_state.chat_db[user_email] = []
 
-user_chat_history = st.session_state.chat_db[user_id]
+user_chat_history = st.session_state.chat_db[user_email]
 
 # 🛠️ 5. Hiển thị Lời chào mừng trên màn hình chính khi chưa có tin nhắn
 if len(user_chat_history) == 0:
@@ -119,7 +138,6 @@ if prompt:
     if 'uploaded_file' in locals() and uploaded_file:
         display_prompt = f"📎 **[Đính kèm: {uploaded_file.name}]**\n\n{prompt}"
         
-    # Lưu tin nhắn người dùng vào bộ nhớ riêng của user đó
     user_msg_obj = {"role": "user", "content": display_prompt, "avatar": user_avatar}
     user_chat_history.append(user_msg_obj)
     
@@ -146,7 +164,6 @@ if prompt:
                     answer = response.text
                     st.markdown(answer)
                     
-                    # Lưu tin nhắn của AI vào bộ nhớ riêng của user đó
                     ai_msg_obj = {"role": "assistant", "content": answer}
                     user_chat_history.append(ai_msg_obj)
                 except Exception as e:
