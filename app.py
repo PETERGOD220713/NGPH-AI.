@@ -1,64 +1,74 @@
+import os
 import streamlit as st
-from authlib.integrations.streamlit_client import OAuth
+from google import genai
 
-# 🛠️ 1. Cấu hình trang & Session State
+# 🛠️ 1. Cấu hình giao diện Streamlit
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
-if "user" not in st.session_state:
-    st.session_state.user = None
+# 🛠️ 2. Lấy API Key từ Secrets hoặc Biến môi trường
+API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
+client = genai.Client(api_key=API_KEY) if API_KEY else None
 
-# 🛠️ 2. Khởi tạo OAuth Client (Authlib)
-oauth = OAuth()
-oauth.register(
-    name="google",
-    client_id=st.secrets.get("GOOGLE_CLIENT_ID", ""),
-    client_secret=st.secrets.get("GOOGLE_CLIENT_SECRET", ""),
-    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
-    client_kwargs={"scope": "openid email profile"},
-)
+SYSTEM_INSTRUCTION = """
+Bạn là NGPH AI, một trợ lý trò chuyện thông minh.
+- Tác giả / Người tạo: BÙI TẤN NGHĨA
+- Trường học: THCS NGUYỄN HIỀN
+Khi người dùng hỏi về người tạo hoặc trường học, hãy trả lời chính xác các thông tin trên.
+"""
 
-# 🛠️ 3. Hàm xử lý đăng nhập / đăng xuất
-def login():
-    # Điêu hướng tới luồng OAuth
-    st.login("google")
+# 🛠️ 3. Quản lý trạng thái Đăng nhập (Authlib / Streamlit User)
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-def logout():
-    st.session_state.user = None
-    st.rerun()
-
-# 🛠️ 4. Tinh chỉnh Sidebar Interface
+# Sidebar điều khiển
 with st.sidebar:
-    st.title("💻 NGPH AI Control")
-    if st.session_state.user:
-        st.write(f"👤 **User:** {st.session_state.user.get('name', 'Boss')}")
-        st.write(f"📧 **Email:** {st.session_state.user.get('email', '')}")
-        st.button("🚪 Đăng xuất", on_click=logout, use_container_width=True)
-    else:
-        st.warning("🔒 Chưa đăng nhập")
-        if st.button("🔑 Đăng nhập bằng Google", use_container_width=True):
-            login()
+    st.title("⚡ NGPH AI System")
+    
+    # Kiểm tra trạng thái người dùng
+    try:
+        if hasattr(st, "user") and st.user.is_logged_in:
+            st.session_state.logged_in = True
+            st.success(f"👤 **Xin chào:** {st.user.email}")
+            if st.button("🚪 Đăng xuất", use_container_width=True):
+                st.logout()
+        else:
+            st.warning("🔒 Chưa đăng nhập")
+            if st.button("🔑 Đăng nhập", use_container_width=True):
+                st.login()
+    except Exception:
+        # Nếu chạy local hoặc chưa bật Auth trên Cloud
+        st.info("💡 Chế độ khách (Guest Mode)")
+        st.session_state.logged_in = True
 
-# 🛠️ 5. Giao diện Chat chính
-st.header("⚡ PETERGOD Chat Interface")
+# 🛠️ 4. Khung Chat chính
+st.header("⚡ NGPH AI - Chatbot")
 
-if not st.session_state.user:
-    st.info("🎯 Boss vui lòng đăng nhập ở thanh bên (Sidebar) để bắt đầu chat!")
-else:
-    # Luồng Chat chính
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+# Hiển thị lịch sử chat
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-    if prompt := st.chat_input("Nhập câu hỏi tại đây..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
+# Nhập câu hỏi từ người dùng
+if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-        # Trả lời từ AI
-        response = f"🤖 [NGPH AI]: Đã nhận lệnh từ Boss: '{prompt}'"
-        st.session_state.messages.append({"role": "assistant", "content": response})
-        with st.chat_message("assistant"):
-            st.write(response)
+    with st.chat_message("assistant"):
+        if not client:
+            st.error("Chưa cấu hình GEMINI_API_KEY trong Secrets!")
+        else:
+            with st.spinner("⚡ NGPH AI đang suy nghĩ..."):
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-2.5-flash",
+                        contents=f"{SYSTEM_INSTRUCTION}\n\nNgười dùng: {prompt}"
+                    )
+                    answer = response.text
+                    st.markdown(answer)
+                    st.session_state.messages.append({"role": "assistant", "content": answer})
+                except Exception as e:
+                    st.error(f"Lỗi API: {str(e)}")
