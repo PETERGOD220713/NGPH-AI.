@@ -5,14 +5,12 @@ from google import genai
 # 🛠️ 1. Cấu hình giao diện Streamlit
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
-# CSS căn chỉnh nút Đăng nhập góc trên bên phải & Nút ➕ sát khung nhập câu hỏi
+# CSS căn chỉnh giao diện
 st.markdown("""
 <style>
-    /* Bỏ khoảng trống thừa phía trên */
     .block-container {
         padding-top: 2rem !important;
     }
-    /* Đổ màu và bo góc cho nút ➕ */
     div[data-testid="stPopover"] > button {
         border-radius: 12px !important;
         height: 45px !important;
@@ -47,7 +45,6 @@ with col_header_left:
     st.title("⚡ NGPH AI")
 
 with col_header_right:
-    # Xử lý đăng nhập kiểu Gemini (Không bắt buộc người dùng đăng nhập)
     try:
         if hasattr(st, "user") and st.user.is_logged_in:
             st.success(f"👤 {st.user.email}")
@@ -57,23 +54,31 @@ with col_header_right:
             if st.button("🔑 Đăng nhập / Đăng ký", key="btn_login", use_container_width=True):
                 st.login()
     except Exception:
-        # Chế độ khách (Khách tự do dùng bình thường)
         if st.button("🔑 Đăng nhập / Đăng ký", key="btn_guest_login", use_container_width=True):
             st.info("Chức năng Google OAuth đang chạy ở Chế độ Khách!")
 
 st.divider()
 
-# 🛠️ 4. Khung Chat chính
+# Khởi tạo danh sách tin nhắn
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Hiển thị lịch sử chat
+# 🛠️ 4. Hiển thị Lời chào mừng trên màn hình chính khi chưa nhắn tin
+if len(st.session_state.messages) == 0:
+    st.markdown("""
+        <div style="text-align: center; padding: 40px 20px;">
+            <h1 style="font-size: 2.2rem; font-weight: 700; color: #1677ff;">⚡ Xin chào bạn, chúc bạn một ngày thật vui vẻ!</h1>
+            <p style="font-size: 1.1rem; color: #888; margin-top: 10px;">NGPH AI đã sẵn sàng hỗ trợ. Hãy nhập câu hỏi bên dưới để bắt đầu trò chuyện nhé!</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# 🛠️ 5. Hiển thị lịch sử chat
 for msg in st.session_state.messages:
     avatar_icon = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar_icon):
         st.markdown(msg["content"])
 
-# 🛠️ 5. Thanh nhập câu hỏi tích hợp Nút ➕ nằm ngay bên trái
+# 🛠️ 6. Thanh nhập câu hỏi tích hợp Nút ➕
 col_btn, col_input = st.columns([0.08, 0.92], vertical_alignment="bottom")
 
 with col_btn:
@@ -85,7 +90,7 @@ with col_btn:
 with col_input:
     prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
 
-# 🛠️ 6. Xử lý gửi tin nhắn (Cho phép trao đổi tự do dù chưa đăng nhập)
+# 🛠️ 7. Xử lý gửi tin nhắn
 if prompt:
     display_prompt = prompt
     if 'uploaded_file' in locals() and uploaded_file:
@@ -95,7 +100,6 @@ if prompt:
     with st.chat_message("user", avatar="👤"):
         st.markdown(display_prompt)
 
-    # Trả lời từ NGPH AI với Avatar Sấm sét ⚡
     with st.chat_message("assistant", avatar="⚡"):
         if not client:
             st.error("Chưa cấu hình GEMINI_API_KEY trong Secrets!")
