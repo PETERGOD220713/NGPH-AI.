@@ -5,12 +5,12 @@ from google import genai
 # 🛠️ 1. Cấu hình giao diện Streamlit
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
-# CSS căn chỉnh ô nhập liệu và nút dấu cộng nằm sát nhau chuẩn Gemini
+# CSS căn chỉnh nút Đăng nhập góc trên bên phải & Nút ➕ sát khung nhập câu hỏi
 st.markdown("""
 <style>
-    /* Căn chỉnh khoảng cách thanh Chat */
-    .stChatInput {
-        padding-top: 0px !important;
+    /* Bỏ khoảng trống thừa phía trên */
+    .block-container {
+        padding-top: 2rem !important;
     }
     /* Đổ màu và bo góc cho nút ➕ */
     div[data-testid="stPopover"] > button {
@@ -40,29 +40,30 @@ KHI CÓ BẤT KỲ CÂU HỎI NÀO VỀ NGƯỜI TẠO, TÁC GIẢ HOẶC TRƯ�
 -> BẮT BUỘC TRẢ LỜI LÀ: "Mình được tạo ra bởi Bùi Tấn Nghĩa, học sinh tại trường THCS Nguyễn Hiền!"
 """
 
-# 🛠️ 3. Quản lý trạng thái Đăng nhập
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+# 🛠️ 3. Header giao diện: Tiêu đề bên trái, Đăng nhập / Đăng ký bên phải
+col_header_left, col_header_right = st.columns([0.7, 0.3], vertical_alignment="center")
 
-with st.sidebar:
-    st.title("⚡ NGPH AI System")
+with col_header_left:
+    st.title("⚡ NGPH AI")
+
+with col_header_right:
+    # Xử lý đăng nhập kiểu Gemini (Không bắt buộc người dùng đăng nhập)
     try:
         if hasattr(st, "user") and st.user.is_logged_in:
-            st.session_state.logged_in = True
-            st.success(f"👤 **Xin chào:** {st.user.email}")
-            if st.button("🚪 Đăng xuất", use_container_width=True):
+            st.success(f"👤 {st.user.email}")
+            if st.button("🚪 Đăng xuất", key="btn_logout"):
                 st.logout()
         else:
-            st.warning("🔒 Chưa đăng nhập")
-            if st.button("🔑 Đăng nhập", use_container_width=True):
+            if st.button("🔑 Đăng nhập / Đăng ký", key="btn_login", use_container_width=True):
                 st.login()
     except Exception:
-        st.info("💡 Chế độ khách (Guest Mode)")
-        st.session_state.logged_in = True
+        # Chế độ khách (Khách tự do dùng bình thường)
+        if st.button("🔑 Đăng nhập / Đăng ký", key="btn_guest_login", use_container_width=True):
+            st.info("Chức năng Google OAuth đang chạy ở Chế độ Khách!")
+
+st.divider()
 
 # 🛠️ 4. Khung Chat chính
-st.header("⚡ NGPH AI - Chatbot")
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -84,7 +85,7 @@ with col_btn:
 with col_input:
     prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
 
-# 🛠️ 6. Xử lý gửi tin nhắn
+# 🛠️ 6. Xử lý gửi tin nhắn (Cho phép trao đổi tự do dù chưa đăng nhập)
 if prompt:
     display_prompt = prompt
     if 'uploaded_file' in locals() and uploaded_file:
