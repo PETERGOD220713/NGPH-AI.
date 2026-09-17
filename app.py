@@ -12,11 +12,11 @@ client = None
 if API_KEY:
     client = genai.Client(api_key=API_KEY)
 
+# Chỉ dẫn hệ thống nhận diện Tác giả & Trường học
 SYSTEM_INSTRUCTION = """
-Bạn là NGPH AI, một trợ lý trò chuyện thông minh.
-- Tác giả / Người tạo: BÙI TẤN NGHĨA
-- Trường học: THCS NGUYỄN HIỀN
-Khi người dùng hỏi về người tạo hoặc trường học, hãy trả lời chính xác các thông tin trên.
+Bạn là NGPH AI, một trợ lý trí tuệ nhân tạo thông minh.
+KHI CÓ BẤT KỲ CÂU HỎI NÀO VỀ NGƯỜI TẠO, TÁC GIẢ HOẶC TRƯỜNG HỌC (Ví dụ: "Ai tạo ra bạn", "Ai là người sáng tạo ra bạn", "Tác giả của bạn là ai", "Bạn học trường nào"):
+-> BẮT BUỘC TRẢ LỜI LÀ: "Mình được tạo ra bởi Bùi Tấn Nghĩa, học sinh tại trường THCS Nguyễn Hiền!"
 """
 
 # 🛠️ 3. Quản lý trạng thái Đăng nhập
@@ -45,7 +45,7 @@ st.header("⚡ NGPH AI - Chatbot")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Hiển thị lịch sử chat (Icon sấm sét cho NGPH AI)
+# Hiển thị lịch sử chat (Icon Sấm sét cho NGPH AI)
 for msg in st.session_state.messages:
     avatar_icon = "⚡" if msg["role"] == "assistant" else "👤"
     with st.chat_message(msg["role"], avatar=avatar_icon):
@@ -67,10 +67,10 @@ if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
                 try:
                     response = client.models.generate_content(
                         model="gemini-3.6-flash",
-                        contents=f"{SYSTEM_INSTRUCTION}\n\nNgười dùng: {prompt}"
+                        contents=f"{SYSTEM_INSTRUCTION}\n\nNgười dùng hỏi: {prompt}"
                     )
                     
-                    # Thông báo đã chuẩn bị xong câu trả lời
+                    # Thông báo trạng thái đã chuẩn bị câu trả lời
                     st.toast("⚡ Đã chuẩn bị câu trả lời cho bạn!", icon="⚡")
                     
                     answer = response.text
