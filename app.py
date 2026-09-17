@@ -1,38 +1,64 @@
 import streamlit as st
+from authlib.integrations.streamlit_client import OAuth
 
+# 🛠️ 1. Cấu hình trang & Session State
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
-# 1. Kiểm tra nếu CHƯA đăng nhập -> Hiện nút login và DỪNG script ngay lập tức (st.stop)
-if not st.user.is_logged_in:
-    st.title("⚡ NGPH AI")
-    st.write("Vui lòng đăng nhập tài khoản Google để trải nghiệm hệ thống.")
-    
-    # Dùng callback on_click=st.login để giữ phiên đăng nhập chuẩn OIDC
-    st.button("🔑 Đăng nhập bằng Google", type="primary", on_click=st.login)
-    st.stop()
+if "user" not in st.session_state:
+    st.session_state.user = None
 
-# 2. Sau khi ĐÃ đăng nhập thành công -> Lấy thông tin user
-user_name = st.user.name if hasattr(st.user, "name") else "Boss"
-user_email = st.user.email if hasattr(st.user, "email") else ""
-user_avatar = st.user.picture if hasattr(st.user, "picture") else ""
+# 🛠️ 2. Khởi tạo OAuth Client (Authlib)
+oauth = OAuth()
+oauth.register(
+    name="google",
+    client_id=st.secrets.get("GOOGLE_CLIENT_ID", ""),
+    client_secret=st.secrets.get("GOOGLE_CLIENT_SECRET", ""),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
 
-# Thanh Sidebar
+# 🛠️ 3. Hàm xử lý đăng nhập / đăng xuất
+def login():
+    # Điêu hướng tới luồng OAuth
+    st.login("google")
+
+def logout():
+    st.session_state.user = None
+    st.rerun()
+
+# 🛠️ 4. Tinh chỉnh Sidebar Interface
 with st.sidebar:
-    st.write("### Profile")
-    if user_avatar:
-        st.image(user_avatar, width=80)
-    st.markdown(f"**{user_name}**")
-    st.caption(user_email)
-    
-    st.divider()
-    st.button("🚪 Đăng xuất", on_click=st.logout)
+    st.title("💻 NGPH AI Control")
+    if st.session_state.user:
+        st.write(f"👤 **User:** {st.session_state.user.get('name', 'Boss')}")
+        st.write(f"📧 **Email:** {st.session_state.user.get('email', '')}")
+        st.button("🚪 Đăng xuất", on_click=logout, use_container_width=True)
+    else:
+        st.warning("🔒 Chưa đăng nhập")
+        if st.button("🔑 Đăng nhập bằng Google", use_container_width=True):
+            login()
 
-# Giao diện chính của NGPH AI
-st.title("⚡ NGPH AI")
-st.write(f"Xin chào boss **{user_name}**! Hệ thống đã sẵn sàng.")
+# 🛠️ 5. Giao diện Chat chính
+st.header("⚡ PETERGOD Chat Interface")
 
-if prompt := st.chat_input("Hỏi NGPH AI bất cứ điều gì..."):
-    with st.chat_message("user", avatar=user_avatar if user_avatar else "👤"):
-        st.write(prompt)
-    with st.chat_message("assistant", avatar="⚡"):
-        st.write("NGPH AI đã nhận phản hồi từ boss!")
+if not st.session_state.user:
+    st.info("🎯 Boss vui lòng đăng nhập ở thanh bên (Sidebar) để bắt đầu chat!")
+else:
+    # Luồng Chat chính
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    if prompt := st.chat_input("Nhập câu hỏi tại đây..."):
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        # Trả lời từ AI
+        response = f"🤖 [NGPH AI]: Đã nhận lệnh từ Boss: '{prompt}'"
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"):
+            st.write(response)
