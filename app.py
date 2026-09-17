@@ -5,33 +5,23 @@ from google import genai
 # 🛠️ 1. Cấu hình giao diện Streamlit
 st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
 
-# CSS Custom để kéo nút ➕ vào thẳng bên trong thanh chat kiểu Gemini
+# CSS căn chỉnh ô nhập liệu và nút dấu cộng nằm sát nhau chuẩn Gemini
 st.markdown("""
 <style>
-    /* Định vị container chứa nút bấm */
-    div[data-element-baseline="true"] {
-        position: relative;
+    /* Căn chỉnh khoảng cách thanh Chat */
+    .stChatInput {
+        padding-top: 0px !important;
     }
-    /* Đẩy nút popover lồng vào góc trái thanh chat */
-    div[data-testid="stPopover"] {
-        position: absolute;
-        bottom: 12px;
-        left: 15px;
-        z-index: 999;
-    }
-    /* Tùy chỉnh kiểu dáng nút ➕ */
+    /* Đổ màu và bo góc cho nút ➕ */
     div[data-testid="stPopover"] > button {
-        border-radius: 50% !important;
-        width: 35px !important;
-        height: 35px !important;
-        padding: 0 !important;
-        border: none !important;
-        background-color: #2b2c2e !important;
-        color: #ffffff !important;
-    }
-    /* Thêm lề trái cho ô chat input để chữ không đè lên nút ➕ */
-    div[data-testid="stChatInput"] textarea {
-        padding-left: 50px !important;
+        border-radius: 12px !important;
+        height: 45px !important;
+        width: 45px !important;
+        border: 1px solid #30363d !important;
+        background-color: #1e1e1e !important;
+        color: #1677ff !important;
+        font-size: 20px !important;
+        font-weight: bold !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -82,18 +72,22 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar=avatar_icon):
         st.markdown(msg["content"])
 
-# 🛠️ 5. Nút ➕ lồng thẳng trên thanh gõ câu hỏi
-with st.popover("➕", help="Thêm file đính kèm"):
-    uploaded_file = st.file_uploader("Tải tệp đính kèm:", type=["png", "jpg", "jpeg", "pdf", "txt"], key="gemini_file")
-    if uploaded_file:
-        st.caption(f"📎 {uploaded_file.name}")
+# 🛠️ 5. Thanh nhập câu hỏi tích hợp Nút ➕ nằm ngay bên trái
+col_btn, col_input = st.columns([0.08, 0.92], vertical_alignment="bottom")
 
-prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
+with col_btn:
+    with st.popover("➕", help="Thêm file đính kèm"):
+        uploaded_file = st.file_uploader("Tải tệp đính kèm:", type=["png", "jpg", "jpeg", "pdf", "txt"], key="gemini_file")
+        if uploaded_file:
+            st.caption(f"📎 {uploaded_file.name}")
+
+with col_input:
+    prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
 
 # 🛠️ 6. Xử lý gửi tin nhắn
 if prompt:
     display_prompt = prompt
-    if uploaded_file:
+    if 'uploaded_file' in locals() and uploaded_file:
         display_prompt = f"📎 **[Đính kèm: {uploaded_file.name}]**\n\n{prompt}"
         
     st.session_state.messages.append({"role": "user", "content": display_prompt})
@@ -108,7 +102,7 @@ if prompt:
             with st.spinner("⚡ **NGPH AI đang suy nghĩ...**"):
                 try:
                     full_content = f"{SYSTEM_INSTRUCTION}\n\nNgười dùng hỏi: {prompt}"
-                    if uploaded_file:
+                    if 'uploaded_file' in locals() and uploaded_file:
                         full_content += f"\n\n[Tệp đính kèm: {uploaded_file.name}]"
 
                     response = client.models.generate_content(
