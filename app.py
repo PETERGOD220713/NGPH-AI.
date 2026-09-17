@@ -51,15 +51,22 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar=avatar_icon):
         st.markdown(msg["content"])
 
-# 🛠️ 5. Nút dấu cộng ➕ tải tệp đính kèm
-with st.popover("➕ Thêm file", use_container_width=False):
-    uploaded_file = st.file_uploader("Tải tệp đính kèm (Ảnh, PDF, TXT...):", type=["png", "jpg", "jpeg", "pdf", "txt"])
-    if uploaded_file:
-        st.success(f"📎 Đã chọn: {uploaded_file.name}")
+# 🛠️ 5. Thanh nhập liệu kiểu Gemini (Nút ➕ đứng ngang hàng với ô gõ)
+chat_container = st.container()
+with chat_container:
+    col_file, col_input = st.columns([1, 10], vertical_alignment="bottom")
 
-# Nhập câu hỏi từ người dùng
-if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
-    # Chuẩn bị nội dung hiển thị
+    with col_file:
+        with st.popover("➕", help="Thêm tệp đính kèm"):
+            uploaded_file = st.file_uploader("Tải file:", type=["png", "jpg", "jpeg", "pdf", "txt"], key="gemini_file")
+            if uploaded_file:
+                st.caption(f"📎 {uploaded_file.name}")
+
+    with col_input:
+        prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
+
+# 🛠️ 6. Xử lý gửi tin nhắn
+if prompt:
     display_prompt = prompt
     if uploaded_file:
         display_prompt = f"📎 **[Đính kèm: {uploaded_file.name}]**\n\n{prompt}"
@@ -73,7 +80,6 @@ if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
         if not client:
             st.error("Chưa cấu hình GEMINI_API_KEY trong Secrets!")
         else:
-            # Hiển thị trạng thái "Đang suy nghĩ..."
             with st.spinner("⚡ **NGPH AI đang suy nghĩ...**"):
                 try:
                     full_content = f"{SYSTEM_INSTRUCTION}\n\nNgười dùng hỏi: {prompt}"
@@ -85,7 +91,6 @@ if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
                         contents=full_content
                     )
                     
-                    # Thông báo trạng thái đã chuẩn bị câu trả lời
                     st.toast("⚡ Đã chuẩn bị câu trả lời cho bạn!", icon="⚡")
                     
                     answer = response.text
