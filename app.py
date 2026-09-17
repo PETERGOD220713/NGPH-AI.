@@ -19,15 +19,12 @@ Bạn là NGPH AI, một trợ lý trò chuyện thông minh.
 Khi người dùng hỏi về người tạo hoặc trường học, hãy trả lời chính xác các thông tin trên.
 """
 
-# 🛠️ 3. Quản lý trạng thái Đăng nhập (Authlib / Streamlit User)
+# 🛠️ 3. Quản lý trạng thái Đăng nhập
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# Sidebar điều khiển
 with st.sidebar:
     st.title("⚡ NGPH AI System")
-    
-    # Kiểm tra trạng thái người dùng
     try:
         if hasattr(st, "user") and st.user.is_logged_in:
             st.session_state.logged_in = True
@@ -39,7 +36,6 @@ with st.sidebar:
             if st.button("🔑 Đăng nhập", use_container_width=True):
                 st.login()
     except Exception:
-        # Nếu chạy local hoặc chưa bật Auth trên Cloud
         st.info("💡 Chế độ khách (Guest Mode)")
         st.session_state.logged_in = True
 
@@ -49,28 +45,34 @@ st.header("⚡ NGPH AI - Chatbot")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Hiển thị lịch sử chat
+# Hiển thị lịch sử chat (Icon sấm sét cho NGPH AI)
 for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
+    avatar_icon = "⚡" if msg["role"] == "assistant" else "👤"
+    with st.chat_message(msg["role"], avatar=avatar_icon):
         st.markdown(msg["content"])
 
 # Nhập câu hỏi từ người dùng
 if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar="👤"):
         st.markdown(prompt)
 
-    with st.chat_message("assistant"):
+    # Trả lời từ NGPH AI với Avatar Sấm sét ⚡
+    with st.chat_message("assistant", avatar="⚡"):
         if not client:
             st.error("Chưa cấu hình GEMINI_API_KEY trong Secrets!")
         else:
-            with st.spinner("⚡ NGPH AI đang suy nghĩ..."):
+            # Hiển thị trạng thái "Đang suy nghĩ..."
+            with st.spinner("⚡ **NGPH AI đang suy nghĩ...**"):
                 try:
-                    # Đã sửa tên model chuẩn: gemini-2.5-flash
                     response = client.models.generate_content(
-                        model="gemini-2.5-flash",
+                        model="gemini-3.6-flash",
                         contents=f"{SYSTEM_INSTRUCTION}\n\nNgười dùng: {prompt}"
                     )
+                    
+                    # Thông báo đã chuẩn bị xong câu trả lời
+                    st.toast("⚡ Đã chuẩn bị câu trả lời cho bạn!", icon="⚡")
+                    
                     answer = response.text
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
