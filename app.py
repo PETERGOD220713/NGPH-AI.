@@ -51,11 +51,22 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar=avatar_icon):
         st.markdown(msg["content"])
 
+# 🛠️ 5. Nút dấu cộng ➕ tải tệp đính kèm
+with st.popover("➕ Thêm file", use_container_width=False):
+    uploaded_file = st.file_uploader("Tải tệp đính kèm (Ảnh, PDF, TXT...):", type=["png", "jpg", "jpeg", "pdf", "txt"])
+    if uploaded_file:
+        st.success(f"📎 Đã chọn: {uploaded_file.name}")
+
 # Nhập câu hỏi từ người dùng
 if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    # Chuẩn bị nội dung hiển thị
+    display_prompt = prompt
+    if uploaded_file:
+        display_prompt = f"📎 **[Đính kèm: {uploaded_file.name}]**\n\n{prompt}"
+        
+    st.session_state.messages.append({"role": "user", "content": display_prompt})
     with st.chat_message("user", avatar="👤"):
-        st.markdown(prompt)
+        st.markdown(display_prompt)
 
     # Trả lời từ NGPH AI với Avatar Sấm sét ⚡
     with st.chat_message("assistant", avatar="⚡"):
@@ -65,9 +76,13 @@ if prompt := st.chat_input("Nhập câu hỏi cho NGPH..."):
             # Hiển thị trạng thái "Đang suy nghĩ..."
             with st.spinner("⚡ **NGPH AI đang suy nghĩ...**"):
                 try:
+                    full_content = f"{SYSTEM_INSTRUCTION}\n\nNgười dùng hỏi: {prompt}"
+                    if uploaded_file:
+                        full_content += f"\n\n[Tệp đính kèm: {uploaded_file.name}]"
+
                     response = client.models.generate_content(
                         model="gemini-3.6-flash",
-                        contents=f"{SYSTEM_INSTRUCTION}\n\nNgười dùng hỏi: {prompt}"
+                        contents=full_content
                     )
                     
                     # Thông báo trạng thái đã chuẩn bị câu trả lời
