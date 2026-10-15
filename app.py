@@ -4,23 +4,21 @@ import streamlit.components.v1 as components
 from google import genai
 from streamlit_oauth import OAuth2Component
 
-# 🛠️ 1. Cấu hình trang & Tích hợp Google Analytics
+# 🛠️ 1. Cấu hình trang & Chèn Thẻ Meta Google Search Console Chuẩn
 st.set_page_config(page_title="NGPH AI - Trợ Lý Trí Tuệ Nhân Tạo", page_icon="⚡", layout="wide")
 
-# Mã Google Analytics & Google Tag Manager với Stream ID của boss
-STREAM_ID = "16135873961"
-
-ga_code = f"""
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id={STREAM_ID}"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){{dataLayer.push(arguments);}}
-  gtag('js', new Date());
-  gtag('config', '{STREAM_ID}');
-</script>
-"""
-components.html(ga_code, height=0)
+# Script tự động bơm thẻ meta trực tiếp vào <head> của trang web cha
+components.html(
+    """
+    <script>
+        var meta = document.createElement('meta');
+        meta.name = "google-site-verification";
+        meta.content = "DUrWEmlubkFLqG0PCZVx5Rp6ViPKIfCv7UQg85iKfwQ";
+        parent.document.getElementsByTagName('head')[0].appendChild(meta);
+    </script>
+    """,
+    height=0,
+)
 
 # CSS căn chỉnh giao diện Cyberpunk & nút đính kèm ➕
 st.markdown("""
