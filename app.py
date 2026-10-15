@@ -1,12 +1,26 @@
 import os
 import streamlit as st
+import streamlit.components.v1 as components
 from google import genai
 from streamlit_oauth import OAuth2Component
 
-# 🛠️ 1. Cấu hình giao diện Streamlit
-st.set_page_config(page_title="NGPH AI", page_icon="⚡", layout="wide")
+# 🛠️ 1. Cấu hình trang & Nhúng Meta Google Search Console
+st.set_page_config(page_title="NGPH AI - Trợ Lý Trí Tuệ Nhân Tạo", page_icon="⚡", layout="wide")
 
-# CSS căn chỉnh giao diện
+# Script tự động nhúng thẻ meta Google Search Console vào thẻ <head>
+components.html(
+    """
+    <script>
+        var meta = document.createElement('meta');
+        meta.name = "google-site-verification";
+        meta.content = "DURWEmlubkF"; // Mã xác minh Google Search Console của boss
+        parent.document.getElementsByTagName('head')[0].appendChild(meta);
+    </script>
+    """,
+    height=0,
+)
+
+# CSS căn chỉnh giao diện Cyberpunk & nút đính kèm ➕
 st.markdown("""
 <style>
     .block-container {
@@ -29,7 +43,6 @@ st.markdown("""
 API_KEY = st.secrets.get("GEMINI_API_KEY", os.environ.get("GEMINI_API_KEY", ""))
 client = genai.Client(api_key=API_KEY) if API_KEY else None
 
-# Lấy thông tin OAuth Google đã tạo từ Secrets
 CLIENT_ID = st.secrets.get("GOOGLE_CLIENT_ID", os.environ.get("GOOGLE_CLIENT_ID", ""))
 CLIENT_SECRET = st.secrets.get("GOOGLE_CLIENT_SECRET", os.environ.get("GOOGLE_CLIENT_SECRET", ""))
 REDIRECT_URI = st.secrets.get("REDIRECT_URI", "https://ngph-ai-whqmmuqlkucrwrqfk8ymkr.streamlit.app/")
@@ -46,11 +59,11 @@ KHI CÓ BẤT KỲ CÂU HỎI NÀO VỀ NGƯỜI TẠO, TÁC GIẢ HOẶC TRƯ�
 -> BẮT BUỘC TRẢ LỜI LÀ: "Mình được tạo ra bởi Bùi Tấn Nghĩa, học sinh tại trường THCS Nguyễn Hiền!"
 """
 
-# Khai báo kho lưu trữ lịch sử chat toàn cục theo từng User Email
+# Bộ nhớ lưu trữ lịch sử trò chuyện theo email người dùng
 if "chat_db" not in st.session_state:
     st.session_state.chat_db = {}
 
-# 🛠️ 3. Header & Nút Đăng nhập / Đăng ký Google
+# 🛠️ 3. Thanh Header & Đăng nhập Google OAuth
 col_header_left, col_header_right = st.columns([0.6, 0.4], vertical_alignment="center")
 
 user_email = "guest_user"
@@ -59,13 +72,12 @@ user_avatar = "👤"
 
 with col_header_left:
     st.title("⚡ NGPH AI")
+    st.caption("Ứng dụng Trí tuệ nhân tạo tạo bởi Bùi Tấn Nghĩa (THCS Nguyễn Hiền)")
 
 with col_header_right:
-    # Kiểm tra token đăng nhập trong session_state
     if "auth_token" not in st.session_state or not st.session_state.auth_token:
-        # Nút Đăng nhập Google chuẩn OAuth
         result = oauth2.authorize_button(
-            name="🔑 Đăng nhập / Đăng ký Google",
+            name="🔑 Đăng nhập bằng Google",
             icon="https://www.google.com/favicon.ico",
             redirect_uri=REDIRECT_URI,
             scope="openid email profile",
@@ -76,11 +88,9 @@ with col_header_right:
             st.session_state.auth_token = result["token"]
             st.rerun()
     else:
-        # Đã đăng nhập: Giải mã token/lấy profile
         token = st.session_state.auth_token
         user_info = token.get("id_token", {})
         
-        # Lấy chi tiết thông tin tài khoản Google
         user_email = user_info.get("email", "google_user")
         user_name = user_info.get("name", "Người dùng Google")
         user_avatar = user_info.get("picture", "👤")
@@ -99,13 +109,12 @@ with col_header_right:
 
 st.divider()
 
-# 🛠️ 4. Tải lịch sử cuộc trò chuyện riêng của Tài khoản
+# 🛠️ 4. Tải và hiển thị lịch sử chat của user
 if user_email not in st.session_state.chat_db:
     st.session_state.chat_db[user_email] = []
 
 user_chat_history = st.session_state.chat_db[user_email]
 
-# 🛠️ 5. Hiển thị Lời chào mừng trên màn hình chính khi chưa có tin nhắn
 if len(user_chat_history) == 0:
     st.markdown("""
         <div style="text-align: center; padding: 40px 20px;">
@@ -114,13 +123,12 @@ if len(user_chat_history) == 0:
         </div>
     """, unsafe_allow_html=True)
 
-# Hiển thị tất cả tin nhắn đã lưu trong lịch sử của user này
 for msg in user_chat_history:
     msg_avatar = "⚡" if msg["role"] == "assistant" else msg.get("avatar", "👤")
     with st.chat_message(msg["role"], avatar=msg_avatar):
         st.markdown(msg["content"])
 
-# 🛠️ 6. Thanh nhập câu hỏi tích hợp Nút ➕
+# 🛠ˆ 5. Ô nhập liệu và nút ➕
 col_btn, col_input = st.columns([0.08, 0.92], vertical_alignment="bottom")
 
 with col_btn:
@@ -132,7 +140,7 @@ with col_btn:
 with col_input:
     prompt = st.chat_input("Hỏi NGPH AI bất cứ điều gì...")
 
-# 🛠️ 7. Xử lý gửi tin nhắn & Tự động LƯU cuộc trò chuyện
+# 🛠️ 6. Xử lý phản hồi AI & lưu cuộc trò chuyện
 if prompt:
     display_prompt = prompt
     if 'uploaded_file' in locals() and uploaded_file:
