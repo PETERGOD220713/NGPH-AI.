@@ -4,21 +4,23 @@ import streamlit.components.v1 as components
 from google import genai
 from streamlit_oauth import OAuth2Component
 
-# 🛠️ 1. Cấu hình trang & Nhúng Meta Google Search Console
+# 🛠️ 1. Cấu hình trang & Tích hợp Google Analytics
 st.set_page_config(page_title="NGPH AI - Trợ Lý Trí Tuệ Nhân Tạo", page_icon="⚡", layout="wide")
 
-# Script tự động nhúng thẻ meta Google Search Console vào thẻ <head>
-components.html(
-    """
-    <script>
-        var meta = document.createElement('meta');
-        meta.name = "google-site-verification";
-        meta.content = "DURWEmlubkF"; // Mã xác minh Google Search Console của boss
-        parent.document.getElementsByTagName('head')[0].appendChild(meta);
-    </script>
-    """,
-    height=0,
-)
+# Mã Google Analytics & Google Tag Manager với Stream ID của boss
+STREAM_ID = "16135873961"
+
+ga_code = f"""
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={STREAM_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+  gtag('js', new Date());
+  gtag('config', '{STREAM_ID}');
+</script>
+"""
+components.html(ga_code, height=0)
 
 # CSS căn chỉnh giao diện Cyberpunk & nút đính kèm ➕
 st.markdown("""
@@ -59,7 +61,6 @@ KHI CÓ BẤT KỲ CÂU HỎI NÀO VỀ NGƯỜI TẠO, TÁC GIẢ HOẶC TRƯ�
 -> BẮT BUỘC TRẢ LỜI LÀ: "Mình được tạo ra bởi Bùi Tấn Nghĩa, học sinh tại trường THCS Nguyễn Hiền!"
 """
 
-# Bộ nhớ lưu trữ lịch sử trò chuyện theo email người dùng
 if "chat_db" not in st.session_state:
     st.session_state.chat_db = {}
 
@@ -128,7 +129,7 @@ for msg in user_chat_history:
     with st.chat_message(msg["role"], avatar=msg_avatar):
         st.markdown(msg["content"])
 
-# 🛠ˆ 5. Ô nhập liệu và nút ➕
+# 🛠️ 5. Ô nhập liệu và nút ➕
 col_btn, col_input = st.columns([0.08, 0.92], vertical_alignment="bottom")
 
 with col_btn:
